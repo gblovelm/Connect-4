@@ -3,6 +3,7 @@ class Connect4 {
     constructor(selector) {
         this.ROWS = 6;
         this.COLS = 7;
+        this.player = 'red'; // start off as player red
         this.selector = selector;
         this.createGrid(); // when createGrid initialises - create the html for the grid
         this.setupEventListeners(); // for mouseover, hover events, etc
@@ -31,6 +32,7 @@ class Connect4 {
 
     setupEventListeners() {
         const $board = $(this.selector);  // grab connect4 DOM element
+        const that = this;  // hack to retain access to original this attribute
 
         function findLastEmptyCell(col) {
             const cells = $(`.col[data-col='${col}']`);  // grab all the cells in current column
@@ -49,13 +51,23 @@ class Connect4 {
 
             const col = $(this).data('col'); // want to find last empty cell in the mouseover'd column
             const $lastEmptyCell = findLastEmptyCell(col);
-            $lastEmptyCell.addClass(`next-red`);  // adds counter to empty cell
+            $lastEmptyCell.addClass(`next-${that.player}`);  // adds token to empty cell
             //console.log(col); // output col ID (needed when looking for empty row to fill in the game)
-        })
+        });
 
         $board.on('mouseleave', '.col', function() {
-            $('.col').removeClass(`next-red`)  // remove last counter added by .addClass
-        })
+            $('.col').removeClass(`next-${that.player}`);  // remove last token added by .addClass
+        });
+
+        $board.on('click', '.col.empty', function() {
+            const col = $(this).data('col'); // col ID of clicked row
+            const $lastEmptyCell = findLastEmptyCell(col);  // want to put token into last empty cell in col
+            $lastEmptyCell.removeClass(`empty next-${that.player}`);
+            //$lastEmptyCell.addClass('red');
+            $lastEmptyCell.addClass(that.player);
+            that.player = (that.player === 'red') ? 'black' : 'red'; // alternate between red and black
+            $(this).trigger('mouseenter');
+        });
     }
 
 }
