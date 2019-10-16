@@ -5,6 +5,8 @@ class Connect4 {
         this.COLS = 7;
         this.player = 'red'; // start off as player red
         this.selector = selector;
+        this.isGameOver = false;
+        this.onPlayerMove = function() {};
         this.createGrid(); // when createGrid initialises - create the html for the grid
         this.setupEventListeners(); // for mouseover, hover events, etc
     
@@ -13,6 +15,9 @@ class Connect4 {
     }
     createGrid() {   // create 6 x 7 array of DIVs
         const $board = $(this.selector);  // grab DOM element
+        $board.empty();  // remove all HTML elements on restart
+        this.isGameOver = false;    // for restart
+        this.plasyer = 'red';       // for restart
         console.log($board);
         for (let row = 0; row < this.ROWS; row++) {
             const $row = $('<div>')  // creates a new html elment called DIV. 
@@ -48,7 +53,7 @@ class Connect4 {
 
         $board.on('mouseenter', '.col.empty', function() {
             //console.log('here', this); // output all div attributes for the mouse-over'd cell
-
+            if (that.isGameOver) return; // ignore mouseenter actions if game over
             const col = $(this).data('col'); // want to find last empty cell in the mouseover'd column
             const $lastEmptyCell = findLastEmptyCell(col);
             $lastEmptyCell.addClass(`next-${that.player}`);  // adds token to empty cell
@@ -60,14 +65,95 @@ class Connect4 {
         });
 
         $board.on('click', '.col.empty', function() {
+            if (that.isGameOver) return; // dont click on anything if game over
             const col = $(this).data('col'); // col ID of clicked row
+            const row = $(this).data('row'); // col ID of clicked row
             const $lastEmptyCell = findLastEmptyCell(col);  // want to put token into last empty cell in col
             $lastEmptyCell.removeClass(`empty next-${that.player}`);
             //$lastEmptyCell.addClass('red');
             $lastEmptyCell.addClass(that.player);
+            $lastEmptyCell.data('player', that.player);
+
+            const winner = that.checkForWinner(
+                $lastEmptyCell.data('row'),
+                $lastEmptyCell.data('col')
+            )
+            if (winner) {
+                that.isGameOver = true;
+                alert(`Game over! Player ${that.player} has won!`);
+                $('.col.empty').removeClass('empty'); // get rid of pointer cursor over empty cells
+                return;
+            }
+            
             that.player = (that.player === 'red') ? 'black' : 'red'; // alternate between red and black
+            that.onPlayerMove(); // alternate displayed text
             $(this).trigger('mouseenter');
         });
     }
 
+    checkForWinner(row, col) {  // input last row/col clicked
+    // looking for 4 rows, columns, diagonal of same colour starting from last token
+        const that = this;
+        
+        function $getCell(i, j) {
+            return $(`.col[data-row='${i}'][data-col='${j}']`);
+        }
+
+        function checkDirection(direction) {
+            let total = 0;
+            let i = row + direction.i;
+            let j = col + direction.j;
+            let $next = $getCell(i, j);  // one cell above token
+            while (i >= 0 &&
+                i < that.ROWS &&
+                j >= 0 &&
+                j < that.COLS &&
+                $next.data('player') === that.player
+              ) {
+                    // while current player = player just dropped, then. 
+                    total++;
+                    i += direction.i;
+                    j += direction.j;
+                    $next = $getCell(i, j);
+              }
+              return total;
+        }
+
+        function checkWin(directionA, directionB) {
+            const total = 1 + 
+                checkDirection(directionA) + 
+                checkDirection(directionB);
+            if (total >= 4) {
+                return that.player;
+            } else {
+                return null;  // no player has won yet
+            }
+        } 
+    
+        function checkDiagonalBLtoTR() {
+            return checkWin({i: 1, j: -1}, {i: 1, j: 1});
+        }
+
+        function checkDiagonalTLtoBR() {
+            return checkWin({i: 1, j: 1}, {i: -1, j: -1});
+        }
+
+        function checkVerticals() {
+            return checkWin({i: -1, j: 0}, {i: 1, j: 0});
+        }
+
+        function checkHorizontals() {
+            return checkWin({i: 0, j: -1}, {i: 0, j: 1});
+        }
+
+        return checkVerticals() || 
+            checkHorizontals() || 
+            checkDiagonalBLtoTR() ||
+            checkDiagonalTLtoBR();
+    }
+
+    restart () {
+        this.createGrid();
+        this.onPlayerMove(); // change player on restart
+    }
 }
